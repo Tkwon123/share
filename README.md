@@ -8,7 +8,9 @@ Inspired by a fundamental issues communitting with a communal shared service inc
   - Limited # of bikes at local docks
   - Inefficient restocking of dock locations
   
-This tool hopes to minimize the penalty of finding empty bike locations by maximizing knowledge of a rapidily depleting resource. 
+This tool hopes to minimize the penalty of finding empty bike locations by maximizing knowledge of a rapidily depleting resource.
+
+Currently a WIP
 
 Methods
 =====
