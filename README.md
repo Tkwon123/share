@@ -10,7 +10,7 @@ Inspired by a fundamental issues communitting with a communal shared service inc
   
 This tool hopes to minimize the penalty of finding empty bike locations by maximizing knowledge of a rapidily depleting resource.
 
-Currently a WIP
+Currently a WIP!
 
 Methods
 =====
