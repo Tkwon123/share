@@ -1,10 +1,10 @@
 require 'nokogiri'
 require 'open-uri'
 require 'rubygems'
-require 'sqlite3'
+require 'active_support'
 require 'active_support/core_ext'
+require 'sqlite3'
 require 'data_mapper'
-
 
 @doc = Nokogiri::XML(open('https://www.capitalbikeshare.com/data/stations/bikeStations.xml'))
 #json = Hash.from_xml(@doc.to_xml).to_json
@@ -59,14 +59,14 @@ end
 
 #Looks up a particular bike location
 def look(search)
-	@a = @doc.xpath("//station[contains(name,'#{search}')]")
-	puts @a
+	@stations = @doc.xpath("//station[contains(name,'#{search}')]")
+	puts @stations
 end
 
 #node.to_xml.gsub(/<\/.*>/,"").gsub(/\</,"").gsub(/\/?>/,": =>")
 
 DataMapper.finalize
-DataMapper.auto_migrate!
+Stations.auto_migrate!
 
 #gsub(/\n?\s?<.*?>/, "|").gsub(/\n/, "")
 #TABLE_NAME = "Bikes"
@@ -76,16 +76,52 @@ DataMapper.auto_migrate!
 #puts q
 #
 #@doc = Nokogiri::XML(open('https://www.capitalbikeshare.com/data/stations/bikeStations.xml'))
+
 def import(stations)
-  @stations = stations.css('station').map{|row| row.to_s.gsub(/(\n  )?<.*?>/,",").gsub(/,{2,}/,",").gsub(/^,|,$/,"'").gsub(/,/,"','").gsub(/\n'/,"")}
+#Take the "Look" method output and format into a useable array
+  @stations = stations.css('station').map{|row| row.to_s.gsub(/(\n  )?<.*?>/,",").gsub(/,{2,}/,",").gsub(/,{2,}/,",").gsub(/^,|,$/,"").gsub(/\n/,"")}[1].split(",")
 end
 
+#@a.css('station').map{|row| row.to_s.gsub(/(\n  )?<.*?>/,",").gsub(/,{2,}/,",").gsub(/,{2,}/,",").gsub(/^,|,$/,"").gsub(/\n/,"")}[1].split(",")
 
+create(import(look("Belmont")))
+
+
+=begin
 #Test functions
 @db = SQLite3::Database.open 'share.sqlite'
 @check = puts @db.execute ("select * from stations")
-@arr = ['foo1','foo2','foo3']
-@arr2 = ['poo1','poo2','poo3']
-@arrc = [@arr,@arr2]
+@insert = Stations.create(
+  :sid => @stations[0],
+  :name => @stations[1],
+  :terminalname => @stations[2],
+  :lastCommWithServer => @stations[3],
+  :lat => @stations[4],
+  :long => @stations[5],
+  :installed => @stations[6],
+  :locked => @stations[7],
+  :installdate => @stations[8],
+  :temporary => @stations[9],
+  :public => @stations[10],
+  :nbBikes => @stations[11],
+  :nbEmptyDocks => @stations[12],
+  :latestUpdateTime => @stations[13]
+   )
 
-['135','Columbia Rd &amp; Belmont St NW','31113','1413128220691','38.920669','-77.04368','true','false','1321625100000','false','true','8','11','1413128220519']
+@inserttest = Stations.create(
+  :sid => "272",
+  :name => "14th &amp; Belmont St NW",
+  :terminalname => "31119",
+  :lastCommWithServer => "1413562785753",
+  :lat => "38.921074",
+  :long => "-77.031887",
+  :installed =>  "true",
+  :locked =>  "false", 
+  :installdate =>  "1380719160000",
+  :temporary =>  "false", 
+  :public =>  "true",
+  :nbBikes =>   "0",
+  :nbEmptyDocks =>  "14",
+  :latestUpdateTime =>  "1413562543066"
+   )
+=end

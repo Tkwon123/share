@@ -14,4 +14,4 @@ Currently a WIP!
 
 Methods
 =====
-Parse an xml data feed via nokogiri, and store the data on sqlite3 database. 
+Parse an xml data feed via nokogiri, and store the data on sqlite3 database. Would ultimately like to hook this up to an external API to provide near-term alerts to prevent biker's remorse at empty dock locations>
