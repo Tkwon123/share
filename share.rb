@@ -6,14 +6,16 @@ require 'active_support/core_ext'
 require 'sqlite3'
 require 'data_mapper'
 
+#Create a nokogiri object to hold complete dataset
 @doc = Nokogiri::XML(open('https://www.capitalbikeshare.com/data/stations/bikeStations.xml'))
-#json = Hash.from_xml(@doc.to_xml).to_json
 
+#Uncomment next line if we need to start from scratch
+#File.delete('share.sqlite') if File.exists?'share.sqlite'
 
-File.delete('share.sqlite') if File.exists?'share.sqlite'
+#Preparing data migrations
 DataMapper.setup(:default,"sqlite3://#{Dir.pwd}/share.sqlite")
 
-
+#missing the remove date; not sure how to strip empty fields
 class Stations	
   include DataMapper::Resource
   property :id, Serial
@@ -33,10 +35,28 @@ class Stations
   property :latestUpdateTime, Integer
 end
 
+#Wrapping up the database
+DataMapper.finalize
+Stations.auto_migrate!
 
-#Unpackaging the array into the sqlite databaase
-def create(row)#,lastCommWithServer,lat,long,installed,locked,installdate,removaldate,temporary,pub,nbBikes,nbEmptyDocks,latestUpdateTime)
- # station.each do |row|
+#Function to look up bike dock by name that accepts a string argument. Storing everything in the stations variable for now
+def look(search)
+	@stations = @doc.xpath("//station[contains(name,'#{search}')]")
+  if @stations.blank? 
+    puts "Doesnt look like anything was in there. Try again."
+  else
+    puts "All loaded up!"
+  end
+end
+
+#Take the "Look" method output and format into a useable array
+def import(stations)
+  @readydata = stations.css('station').map{|row| row.to_s.gsub(/(\n  )?<.*?>/,",").gsub(/,{2,}/,",").gsub(/,{2,}/,",").gsub(/^,|,$/,"").gsub(/\n/,"")}[1].split(",")
+  puts "Data is ready to be inserted!"
+end
+
+#Unpackaging the array into the sqlite database. 
+def create(row)
     puts 'Adding row...'
     Stations.create(
       :sid => row[0],
@@ -54,44 +74,49 @@ def create(row)#,lastCommWithServer,lat,long,installed,locked,installdate,remova
       :nbEmptyDocks => row[12],
       :latestUpdateTime => row[13]
      ).save
-# end
+  # end
 end
 
-#Looks up a particular bike location
-def look(search)
-	@stations = @doc.xpath("//station[contains(name,'#{search}')]")
-	puts @stations
+ 
+def beam(station)
+  @doc = Nokogiri::XML(open('https://www.capitalbikeshare.com/data/stations/bikeStations.xml'))
+  @stations = @doc.xpath("//station[contains(name,'#{station}')]")
+  if @stations.blank? 
+    puts "Doesnt look like anything was in there. Try again."
+  else
+    @readydata = @stations.css('station').map{|row| row.to_s.gsub(/(\n  )?<.*?>/,",").gsub(/,{2,}/,",").gsub(/,{2,}/,",").gsub(/^,|,$/,"").gsub(/\n/,"")}[1].split(",")
+    puts "Everything is formatted nicely. Adding row..."
+    Stations.create(
+      :sid => @readydata[0],
+      :name => @readydata[1],
+      :terminalname => @readydata[2],
+      :lastCommWithServer => @readydata[3],
+      :lat => @readydata[4],
+      :long => @readydata[5],
+      :installed => @readydata[6],
+      :locked => @readydata[7],
+      :installdate => @readydata[8],
+      :temporary => @readydata[9],
+      :public => @readydata[10],
+      :nbBikes => @readydata[11],
+      :nbEmptyDocks => @readydata[12],
+      :latestUpdateTime => @readydata[13]
+     ).save
+    puts "Complete!"
+    @db = SQLite3::Database.open 'share.sqlite'
+    @check
+  end
 end
 
-#node.to_xml.gsub(/<\/.*>/,"").gsub(/\</,"").gsub(/\/?>/,": =>")
 
-DataMapper.finalize
-Stations.auto_migrate!
 
-#gsub(/\n?\s?<.*?>/, "|").gsub(/\n/, "")
-#TABLE_NAME = "Bikes"
-#FIELD_NAMES = [['id', 'NUMERIC'], ['name', 'STRING'], ['terminalName', 'STRING'], ['lastCommWithServer', 'STRING'], ['lat', 'VARCHAR'], ['long', 'VARCHAR'], ['installed', 'STRING'], ['locked', 'STRING'], ['installDate', 'INTEGER'],  ['removalDate','INTEGER'], ['temporary', 'BOOLEAN'], ['public', 'BOOLEAN'], ['nbBikes', 'INTEGER'], ['nbEmptyDocks', 'INTEGER'], ['latestUpdateTime', 'INTEGER']
-#
-
-#puts q
-#
-#@doc = Nokogiri::XML(open('https://www.capitalbikeshare.com/data/stations/bikeStations.xml'))
-
-def import(stations)
-#Take the "Look" method output and format into a useable array
-  @stations = stations.css('station').map{|row| row.to_s.gsub(/(\n  )?<.*?>/,",").gsub(/,{2,}/,",").gsub(/,{2,}/,",").gsub(/^,|,$/,"").gsub(/\n/,"")}[1].split(",")
-end
-
-#@a.css('station').map{|row| row.to_s.gsub(/(\n  )?<.*?>/,",").gsub(/,{2,}/,",").gsub(/,{2,}/,",").gsub(/^,|,$/,"").gsub(/\n/,"")}[1].split(",")
-
-create(import(look("Belmont")))
-
+#Some functions to retrieve data
+@db = SQLite3::Database.open 'share.sqlite'
+@check = @db.execute ("select * from Stations")
 
 =begin
 #Test functions
-@db = SQLite3::Database.open 'share.sqlite'
-@check = puts @db.execute ("select * from stations")
-@insert = Stations.create(
+
   :sid => @stations[0],
   :name => @stations[1],
   :terminalname => @stations[2],
