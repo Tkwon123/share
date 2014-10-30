@@ -13,26 +13,34 @@ require 'data_mapper'
 #File.delete('share.sqlite') if File.exists?'share.sqlite'
 
 #Preparing data migrations
-DataMapper.setup(:default,"sqlite3://#{Dir.pwd}/share.sqlite")
+configure :development do
+  DataMapper.setup(:default,"sqlite3://#{Dir.pwd}/share.sqlite")
+end
+
+configure :production do
+  DataMapper.setup(:default, ENV['DATABASE_URL'])
+end
 
 #missing the remove date; not sure how to strip empty fields
+
 class Stations	
-  include DataMapper::Resource
-  property :id, Serial
-  property :sid, Integer
-  property :name, String
-  property :terminalname, String
-  property :lastCommWithServer, String
-  property :lat, Float
-  property :long, Float
-  property :installed, Boolean
-  property :locked, Boolean
-  property :installdate, Integer
-  property :temporary, Boolean
-  property :public, Boolean
-  property :nbBikes, Integer
-  property :nbEmptyDocks, Integer
-  property :latestUpdateTime, Integer
+    include DataMapper::Resource
+    property :id, Serial
+    property :created, DateTime
+    property :sid, Integer
+    property :name, String
+    property :terminalname, String
+    property :lastCommWithServer, String
+    property :lat, Float
+    property :long, Float
+    property :installed, Boolean
+    property :locked, Boolean
+    property :installdate, Integer
+    property :temporary, Boolean
+    property :public, Boolean
+    property :nbBikes, Integer
+    property :nbEmptyDocks, Integer
+    property :latestUpdateTime, Integer
 end
 
 #Wrapping up the database
@@ -100,7 +108,8 @@ def beam(station)
       :public => @readydata[10],
       :nbBikes => @readydata[11],
       :nbEmptyDocks => @readydata[12],
-      :latestUpdateTime => @readydata[13]
+      :latestUpdateTime => @readydata[13],
+      :created => Time.now
      ).save
     puts "Complete!"
     @db = SQLite3::Database.open 'share.sqlite'
