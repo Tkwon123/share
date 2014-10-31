@@ -5,21 +5,19 @@ require 'active_support'
 require 'active_support/core_ext'
 require 'sqlite3'
 require 'data_mapper'
-
+require 'timers'
 #Create a nokogiri object to hold complete dataset
 @doc = Nokogiri::XML(open('https://www.capitalbikeshare.com/data/stations/bikeStations.xml'))
 
 #Uncomment next line if we need to start from scratch
-#File.delete('share.sqlite') if File.exists?'share.sqlite'
+File.delete('share.sqlite') if File.exists?'share.sqlite'
+  else
+    SQLite3::Database.new share.sqlite
+  end
 
 #Preparing data migrations
-configure :development do
-  DataMapper.setup(:default,"sqlite3://#{Dir.pwd}/share.sqlite")
-end
+DataMapper.setup(:default,"sqlite3://#{Dir.pwd}/share.sqlite")
 
-configure :production do
-  DataMapper.setup(:default, ENV['DATABASE_URL'])
-end
 
 #missing the remove date; not sure how to strip empty fields
 
@@ -122,6 +120,14 @@ end
 #Some functions to retrieve data
 @db = SQLite3::Database.open 'share.sqlite'
 @check = @db.execute ("select * from Stations")
+
+
+
+timers = Timers::Group.new
+
+timers.every(60) { beam 'Belmont' }
+
+loop { timers.wait }
 
 =begin
 #Test functions
