@@ -9,41 +9,43 @@ require 'timers'
 #Create a nokogiri object to hold complete dataset
 @doc = Nokogiri::XML(open('https://www.capitalbikeshare.com/data/stations/bikeStations.xml'))
 
-#Uncomment next line if we need to start from scratch
-File.delete('share.sqlite') if File.exists?'share.sqlite'
-  else
-    SQLite3::Database.new share.sqlite
-  end
-
-#Preparing data migrations
-DataMapper.setup(:default,"sqlite3://#{Dir.pwd}/share.sqlite")
 
 
 #missing the remove date; not sure how to strip empty fields
 
-class Stations	
-    include DataMapper::Resource
-    property :id, Serial
-    property :created, DateTime
-    property :sid, Integer
-    property :name, String
-    property :terminalname, String
-    property :lastCommWithServer, String
-    property :lat, Float
-    property :long, Float
-    property :installed, Boolean
-    property :locked, Boolean
-    property :installdate, Integer
-    property :temporary, Boolean
-    property :public, Boolean
-    property :nbBikes, Integer
-    property :nbEmptyDocks, Integer
-    property :latestUpdateTime, Integer
+if File.file?('share.sqlite')
+    puts "Database already exists. Proceeding..."
+  else
+    puts "Looks like you need a place to store data. Let me build that for you!"
+    DataMapper.setup(:default,"sqlite3://#{Dir.pwd}/share.sqlite")
+    class Stations  
+      include DataMapper::Resource
+      property :id, Serial
+      property :created, DateTime
+      property :sid, Integer
+      property :name, String
+      property :terminalname, String
+      property :lastCommWithServer, String
+      property :lat, Float
+      property :long, Float
+      property :installed, Boolean
+      property :locked, Boolean
+      property :installdate, Integer
+      property :temporary, Boolean
+      property :public, Boolean
+      property :nbBikes, Integer
+      property :nbEmptyDocks, Integer
+      property :latestUpdateTime, Integer
+    end
+  #Preparing data migrations
+
+  #Wrapping up the database
+  DataMapper.finalize
+  Stations.auto_migrate!
+  puts "All done! Lets start grabbing data..."
 end
 
-#Wrapping up the database
-DataMapper.finalize
-Stations.auto_migrate!
+
 
 #Function to look up bike dock by name that accepts a string argument. Storing everything in the stations variable for now
 def look(search)
@@ -109,59 +111,19 @@ def beam(station)
       :latestUpdateTime => @readydata[13],
       :created => Time.now
      ).save
-    puts "Complete!"
-    @db = SQLite3::Database.open 'share.sqlite'
-    @check
+    puts "New row inserted!"
+    puts "You have #{@db.execute("select count(*) from Stations").join()} records in the database."
   end
+  @db = SQLite3::Database.open 'share.sqlite'
 end
 
 
 
-#Some functions to retrieve data
+#Some helper functions functions to test data retrieval 
 @db = SQLite3::Database.open 'share.sqlite'
 @check = @db.execute ("select * from Stations")
 
-
-
+beam 'Belmont'
 timers = Timers::Group.new
-
 timers.every(60) { beam 'Belmont' }
-
 loop { timers.wait }
-
-=begin
-#Test functions
-
-  :sid => @stations[0],
-  :name => @stations[1],
-  :terminalname => @stations[2],
-  :lastCommWithServer => @stations[3],
-  :lat => @stations[4],
-  :long => @stations[5],
-  :installed => @stations[6],
-  :locked => @stations[7],
-  :installdate => @stations[8],
-  :temporary => @stations[9],
-  :public => @stations[10],
-  :nbBikes => @stations[11],
-  :nbEmptyDocks => @stations[12],
-  :latestUpdateTime => @stations[13]
-   )
-
-@inserttest = Stations.create(
-  :sid => "272",
-  :name => "14th &amp; Belmont St NW",
-  :terminalname => "31119",
-  :lastCommWithServer => "1413562785753",
-  :lat => "38.921074",
-  :long => "-77.031887",
-  :installed =>  "true",
-  :locked =>  "false", 
-  :installdate =>  "1380719160000",
-  :temporary =>  "false", 
-  :public =>  "true",
-  :nbBikes =>   "0",
-  :nbEmptyDocks =>  "14",
-  :latestUpdateTime =>  "1413562543066"
-   )
-=end
