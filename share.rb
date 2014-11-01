@@ -6,43 +6,42 @@ require 'active_support/core_ext'
 require 'sqlite3'
 require 'data_mapper'
 require 'timers'
+require 'dm-sqlite-adapter'
 #Create a nokogiri object to hold complete dataset
 @doc = Nokogiri::XML(open('https://www.capitalbikeshare.com/data/stations/bikeStations.xml'))
 
-
-
-#missing the remove date; not sure how to strip empty fields
+#Here's the structure of our data. Missing the "removeDate" data field but is empty on the original dagtaset
+class Stations  
+  include DataMapper::Resource
+  property :id, Serial
+  property :created, DateTime
+  property :sid, Integer
+  property :name, String
+  property :terminalname, String
+  property :lastCommWithServer, String
+  property :lat, Float
+  property :long, Float
+  property :installed, Boolean
+  property :locked, Boolean
+  property :installdate, Integer
+  property :temporary, Boolean
+  property :public, Boolean
+  property :nbBikes, Integer
+  property :nbEmptyDocks, Integer
+  property :latestUpdateTime, Integer
+end
+DataMapper.finalize
 
 if File.file?('share.sqlite')
     puts "Database already exists. Proceeding..."
+    #Creating the connection
+    DataMapper.setup(:default,"sqlite3://#{Dir.pwd}/share.sqlite")
   else
     puts "Looks like you need a place to store data. Let me build that for you!"
+    #Use same function to create it and migrate schema
     DataMapper.setup(:default,"sqlite3://#{Dir.pwd}/share.sqlite")
-    class Stations  
-      include DataMapper::Resource
-      property :id, Serial
-      property :created, DateTime
-      property :sid, Integer
-      property :name, String
-      property :terminalname, String
-      property :lastCommWithServer, String
-      property :lat, Float
-      property :long, Float
-      property :installed, Boolean
-      property :locked, Boolean
-      property :installdate, Integer
-      property :temporary, Boolean
-      property :public, Boolean
-      property :nbBikes, Integer
-      property :nbEmptyDocks, Integer
-      property :latestUpdateTime, Integer
-    end
-  #Preparing data migrations
-
-  #Wrapping up the database
-  DataMapper.finalize
-  Stations.auto_migrate!
-  puts "All done! Lets start grabbing data..."
+    Stations.auto_migrate!
+    puts "All done! Lets start grabbing data..."
 end
 
 
@@ -57,7 +56,7 @@ def look(search)
   end
 end
 
-#Take the "Look" method output and format into a useable array
+#Take the "Look" method output and strip away that XML garbage into an array
 def import(stations)
   @readydata = stations.css('station').map{|row| row.to_s.gsub(/(\n  )?<.*?>/,",").gsub(/,{2,}/,",").gsub(/,{2,}/,",").gsub(/^,|,$/,"").gsub(/\n/,"")}[1].split(",")
   puts "Data is ready to be inserted!"
@@ -85,7 +84,7 @@ def create(row)
   # end
 end
 
- 
+#Sample function for specific dock
 def beam(station)
   @doc = Nokogiri::XML(open('https://www.capitalbikeshare.com/data/stations/bikeStations.xml'))
   @stations = @doc.xpath("//station[contains(name,'#{station}')]")
@@ -125,5 +124,7 @@ end
 
 beam 'Belmont'
 timers = Timers::Group.new
+#Capture data every minute
 timers.every(60) { beam 'Belmont' }
+#Lets wait!
 loop { timers.wait }
