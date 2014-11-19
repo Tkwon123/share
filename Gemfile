@@ -1,6 +1,6 @@
 source 'http://rubygems.org'
 
-gem 'timer'
+gem 'timers'
 gem 'nokogiri'
 gem 'data_mapper'
 
